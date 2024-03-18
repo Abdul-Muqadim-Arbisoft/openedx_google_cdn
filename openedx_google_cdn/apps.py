@@ -11,11 +11,11 @@ class OpenedxGoogleCdnConfig(AppConfig):
     """
 
     name = 'openedx_google_cdn'
-    # plugin_app = {
-    #     'settings_config': {
-    #         'lms.djangoapp': {
-    #             'common': {'relative_path': 'settings.common'},
-    #         }
-    #     },
-    # } 
+    plugin_app = {
+        'settings_config': {
+            'lms.djangoapp': {
+                'common': {'relative_path': 'settings'},
+            }
+        },
+    } 
 
