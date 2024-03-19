@@ -14,7 +14,7 @@ class OpenedxGoogleCdnConfig(AppConfig):
     plugin_app = {
         'settings_config': {
             'lms.djangoapp': {
-                'common': {'relative_path': 'settings'},
+                'common': {'relative_path': 'settings.common'},
             }
         },
     } 

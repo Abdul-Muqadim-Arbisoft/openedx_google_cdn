@@ -59,3 +59,4 @@ TEMPLATES = [{
         ],
     },
 }]
+DEBUG = True
