@@ -1,23 +1,17 @@
-import tempfile
-# from google.cloud import storage
-from rest_framework.response import Response
-from rest_framework import status as rest_status
-
 import json
 import logging
+import tempfile
 from uuid import uuid4
+
 from django.conf import settings
-from django.http import  HttpResponseNotFound
+from django.http import HttpResponseNotFound
 from django.utils.translation import gettext as _
-from edxval.api import (
-    create_video,
-    get_transcript_preferences,
-    remove_video_for_course,
-)
 from pytz import UTC
+from rest_framework import status as rest_status
+from rest_framework.response import Response
 
 from common.djangoapps.util.json_request import JsonResponse
-from openedx.core.djangoapps.video_config.models import VideoTranscriptEnabledFlag
+from cms.djangoapps.contentstore.toggles import use_mock_video_uploads
 from cms.djangoapps.contentstore.video_storage_handlers import (
     _get_and_validate_course,
     videos_index_json,
@@ -28,19 +22,21 @@ from cms.djangoapps.contentstore.video_storage_handlers import (
     _update_pagination_context,
     send_video_status_update,
     videos_post,
-
 )
-from cms.djangoapps.contentstore.toggles import  use_mock_video_uploads
+from edxval.api import (
+    create_video,
+    get_transcript_preferences,
+    remove_video_for_course,
+)
+from openedx.core.djangoapps.video_config.models import VideoTranscriptEnabledFlag
+from xmodule.exceptions import NotFoundError
+from xmodule.video_block.transcripts_utils import Transcript
 from xmodule.video_block.video_block import VideoBlock
+
 try:
     import edxval.api as edxval_api
 except ImportError:
     edxval_api = None
-
-from xmodule.video_block.transcripts_utils import (
-    Transcript,
-)
-from xmodule.exceptions import NotFoundError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,9 +47,6 @@ VIDEO_SUPPORTED_FILE_FORMATS = {
 
 
 KEY_EXPIRATION_IN_SECONDS = 86400
-
-
-
 
 
 
@@ -175,6 +168,15 @@ def videos_post_cdn(course, request):
             method="PUT",
             content_type=req_file['content_type'],
         )
+        
+        if getattr(settings, "ENABLE_GOOGLE_CDN", None):
+            source_url = "{}/{}/{}".format(
+                settings.GOOGLE_CDN_HOST,
+                settings.VIDEO_UPLOAD_PIPELINE.get("ROOT_PATH", ""),
+                edx_video_id
+            )
+        else:
+            source_url = None
 
         # persist edx_video_id in VAL
         create_video({
@@ -183,7 +185,8 @@ def videos_post_cdn(course, request):
             'client_video_id': file_name,
             'duration': 0,
             'encoded_videos': [],
-            'courses': [str(course.id)]
+            'courses': [str(course.id)],
+            'html5_sources': [source_url] if source_url else []
         })
 
         resp_files.append({'file_name': file_name, 'upload_url': upload_url, 'edx_video_id': edx_video_id})
